@@ -17,6 +17,8 @@ import {
   LEVEL_ROW_HEIGHT_PX,
 } from '../utils/careerPathGrid';
 
+const ROLE_MATCH_URL = 'https://role-match-one.vercel.app/';
+
 interface CareerPathDiagramProps {
   careerPath: CareerPath;
 }
@@ -89,9 +91,20 @@ export function CareerPathDiagram({ careerPath }: CareerPathDiagramProps) {
 
           <div className="flex items-start justify-between gap-6 flex-wrap">
             <div>
-              <h1 className="font-display text-[2rem] lg:text-[2.25rem] text-cp leading-tight mb-4">
-                {expertise?.name}
-              </h1>
+              <div className="flex flex-wrap items-center gap-3 mb-4">
+                <h1 className="font-display text-[2rem] lg:text-[2.25rem] text-cp leading-tight">
+                  {expertise?.name}
+                </h1>
+                <a
+                  href={ROLE_MATCH_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={t.roleMatchAria}
+                  className="print:hidden shrink-0 px-4 py-2 rounded-full border border-[var(--cp-primary)] text-cp-primary text-[13px] font-semibold hover:bg-[var(--cp-primary)]/10 transition-colors duration-200"
+                >
+                  {t.roleMatch}
+                </a>
+              </div>
               <div className="flex items-center gap-2 flex-wrap">
                 {expertise?.segment && (
                   <span className="px-3 py-1 rounded-full text-[12px] font-semibold border border-cp text-cp-primary bg-cp-surface/80">

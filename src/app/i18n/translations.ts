@@ -29,6 +29,8 @@ export const translations = {
     missingTitle: 'Chưa có lộ trình',
     missingBody: (name: string) =>
       `Chuyên môn ${name} chưa có dữ liệu. Vui lòng chọn chuyên môn khác.`,
+    roleMatch: 'Liệu bạn có hợp?',
+    roleMatchAria: 'Mở công cụ kiểm tra độ phù hợp vai trò',
     exportPdf: 'Export PDF',
     share: 'Chia sẻ',
     shareCopied: 'Đã sao chép link chia sẻ',
@@ -87,6 +89,8 @@ export const translations = {
     missingTitle: 'No career path yet',
     missingBody: (name: string) =>
       `Expertise ${name} has no path data. Please choose another expertise.`,
+    roleMatch: 'Are you a good fit?',
+    roleMatchAria: 'Open role fit assessment tool',
     exportPdf: 'Export PDF',
     share: 'Share',
     shareCopied: 'Link copied to clipboard',
