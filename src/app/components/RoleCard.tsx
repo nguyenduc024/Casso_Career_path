@@ -1,6 +1,11 @@
 import { useRef, useState, type MouseEvent } from 'react';
+import { Crown } from 'lucide-react';
 import type { Role } from '../data/careerPaths';
 import { getLevelLabel } from '../utils/careerPathLayout';
+
+function isCeoRole(role: Role): boolean {
+  return role.title === 'CEO' || role.id.endsWith('-ceo');
+}
 
 interface Ripple {
   id: number;
@@ -33,6 +38,7 @@ export function RoleCard({
   const rippleId = useRef(0);
   const levelLabel = getLevelLabel(role);
   const enterDelay = trackIndex * 80 + rowIndex * 50;
+  const showCrown = isCeoRole(role);
 
   const handleClick = (e: MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -62,6 +68,15 @@ export function RoleCard({
       className="role-card-enter relative cursor-pointer w-full max-w-[240px] mx-auto outline-none"
       style={{ animationDelay: `${enterDelay}ms` }}
     >
+      {showCrown && (
+        <span className="role-ceo-crown" aria-hidden>
+          <Crown
+            className="role-ceo-crown-icon"
+            strokeWidth={0.75}
+          />
+        </span>
+      )}
+
       <div
         className={[
           'relative rounded-[12px] border bg-cp-surface px-3.5 py-3 overflow-hidden',

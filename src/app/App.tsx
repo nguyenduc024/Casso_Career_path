@@ -5,6 +5,7 @@ import { CareerPathDiagram } from './components/CareerPathDiagram';
 import { EmptyState } from './components/EmptyState';
 import { MissingPathState } from './components/MissingPathState';
 import { HeaderToolbar } from './components/HeaderToolbar';
+import { SiteFooter } from './components/SiteFooter';
 import { useAppPreferences } from './context/AppPreferences';
 import { expertises } from './data/expertises';
 import { careerPaths } from './data/careerPaths';
@@ -77,7 +78,7 @@ export default function App() {
           />
         </div>
 
-        <main className="flex-1 overflow-auto min-w-0">
+        <main className="flex-1 overflow-y-auto min-w-0">
           {!selectedExpertise ? (
             <EmptyState
               enabledCount={enabledCount}
@@ -89,6 +90,7 @@ export default function App() {
           ) : (
             <MissingPathState expertiseName={selectedExpertiseData?.name ?? ''} />
           )}
+          <SiteFooter />
         </main>
       </div>
     </div>

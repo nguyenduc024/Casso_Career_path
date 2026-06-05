@@ -36,6 +36,22 @@ export const translations = {
     exportHint: 'Mở hộp thoại in — chọn "Lưu thành PDF"',
     legendPromotion: 'Thăng tiến',
     legendBidirectional: 'Chuyển đổi 2 chiều',
+    footer: {
+      brandAria: 'Đến trang chủ Casso',
+      hotlineLabel: 'Tổng đài hỗ trợ',
+      hotlineHours: '8h00 – 17h30: Thứ Hai – Thứ Sáu',
+      taglineTitle: 'Robot tài chính Casso',
+      descLead: 'Giải pháp ',
+      descBold: 'tập trung hóa dữ liệu tài chính doanh nghiệp',
+      descTail:
+        ' và tự động hóa tác vụ tài chính: thanh toán – tài chính – thuế – kế toán',
+      companyName: 'Công ty TNHH Casso',
+      taxId:
+        'MST: 0316794479, cấp ngày 07/4/2021 tại Sở Kế hoạch và Đầu tư TPHCM',
+      addressLabel: 'Địa chỉ:',
+      address:
+        'I.102D, Nhà A, Khu Công Nghệ Phần Mềm, Đường Nội Bộ Đại học Quốc Gia Thành Phố Hồ Chí Minh, Phường Linh Xuân, TP Hồ Chí Minh, Việt Nam',
+    },
     tracks: {
       trainee: 'Trainee',
       intern: 'Intern',
@@ -78,6 +94,22 @@ export const translations = {
     exportHint: 'Open print dialog — choose "Save as PDF"',
     legendPromotion: 'Promotion',
     legendBidirectional: 'Two-way transition',
+    footer: {
+      brandAria: 'Go to Casso homepage',
+      hotlineLabel: 'Support hotline',
+      hotlineHours: '8:00 AM – 5:30 PM: Monday – Friday',
+      taglineTitle: 'Casso financial robot',
+      descLead: 'A solution for ',
+      descBold: 'centralizing corporate financial data',
+      descTail:
+        ' and automating financial tasks: payments, finance, tax, and accounting',
+      companyName: 'Casso Co., Ltd',
+      taxId:
+        'Tax ID: 0316794479, issued 07/04/2021 by the Ho Chi Minh City Department of Planning and Investment',
+      addressLabel: 'Address:',
+      address:
+        'I.102D, Building A, Software Technology Park, Vietnam National University Ho Chi Minh City Internal Road, Linh Xuan Ward, Ho Chi Minh City, Vietnam',
+    },
     tracks: {
       trainee: 'Trainee',
       intern: 'Intern',

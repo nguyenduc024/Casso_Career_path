@@ -78,7 +78,7 @@ export function CareerPathDiagram({ careerPath }: CareerPathDiagramProps) {
   const breadcrumbGroup = expertise?.group ?? 'Career Path';
 
   return (
-    <div className="h-full overflow-auto career-diagram-area">
+    <div className="career-diagram-area">
       <div className="career-diagram-print-sheet p-8 lg:p-10 max-w-[1680px] mx-auto print:p-6">
         <header className="mb-8 animate-[card-enter_0.4s_ease-out_both]">
           <p className="text-[13px] text-cp-muted mb-2 font-medium tracking-wide">

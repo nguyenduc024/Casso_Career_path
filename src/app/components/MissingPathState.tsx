@@ -9,7 +9,7 @@ export function MissingPathState({ expertiseName }: MissingPathStateProps) {
   const { t } = useAppPreferences();
 
   return (
-    <div className="h-full flex items-center justify-center p-12 career-diagram-area">
+    <div className="min-h-[calc(100dvh-3.5rem)] flex items-center justify-center p-12 career-diagram-area">
       <div className="text-center max-w-md role-card-enter">
         <div className="mx-auto mb-6 w-16 h-16 rounded-2xl bg-[var(--cp-primary)]/10 flex items-center justify-center border border-cp">
           <MapPinOff className="w-8 h-8 text-cp-primary" />

@@ -1,8 +1,8 @@
 import { expertises } from '../data/expertises';
-
-const EMPTY_CTA_EXPERTISE_ID = 'software';
 import { useAppPreferences } from '../context/AppPreferences';
 import { cassoLogoUrl } from '../cassoLogo';
+
+const EMPTY_CTA_EXPERTISE_ID = 'software';
 
 interface EmptyStateProps {
   enabledCount: number;
@@ -18,7 +18,7 @@ export function EmptyState({ enabledCount, totalCount, onExplore }: EmptyStatePr
   const h = t.emptyHeadline;
 
   return (
-    <div className="h-full flex items-center justify-center p-8 sm:p-12 career-diagram-area">
+    <div className="min-h-[calc(100dvh-3.5rem)] flex items-center justify-center p-8 sm:p-12 career-diagram-area">
       <div className="text-center max-w-xl role-card-enter">
         <div className="mb-8 sm:mb-10 flex justify-center">
           <img
