@@ -53,6 +53,13 @@ export const translations = {
       addressLabel: 'Địa chỉ:',
       address:
         'I.102D, Nhà A, Khu Công Nghệ Phần Mềm, Đường Nội Bộ Đại học Quốc Gia Thành Phố Hồ Chí Minh, Phường Linh Xuân, TP Hồ Chí Minh, Việt Nam',
+      quoteLead: 'Mỗi ',
+      quoteHighlight1: 'doanh nghiệp',
+      quoteMid: ' cũng là một ',
+      quoteHighlight2: 'ngân hàng số',
+      joinTeamLead: 'Tham gia đội ngũ ',
+      joinTeamBrand: 'CASSO',
+      recruitAria: 'Đến trang tuyển dụng Casso',
     },
     tracks: {
       trainee: 'Trainee',
@@ -113,6 +120,13 @@ export const translations = {
       addressLabel: 'Address:',
       address:
         'I.102D, Building A, Software Technology Park, Vietnam National University Ho Chi Minh City Internal Road, Linh Xuan Ward, Ho Chi Minh City, Vietnam',
+      quoteLead: 'Every ',
+      quoteHighlight1: 'business',
+      quoteMid: ' is also a ',
+      quoteHighlight2: 'digital bank',
+      joinTeamLead: 'Join the  ',
+      joinTeamBrand: ' CASSO',
+      recruitAria: 'Go to Casso careers page',
     },
     tracks: {
       trainee: 'Trainee',
