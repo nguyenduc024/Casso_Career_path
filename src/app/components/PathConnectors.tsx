@@ -1,12 +1,13 @@
-import { useEffect, useState } from 'react';
-import { motion } from 'motion/react';
-import type { Role, Connection, Track } from '../data/careerPaths';
+import { useEffect, useId, useState } from 'react';
+import type { Role, Connection } from '../data/careerPaths';
+import { DIAGRAM_CANVAS_ATTR } from '../utils/careerPathLayout';
+import { getPositionInContainer } from '../utils/connectorPosition';
 
 interface PathConnectorsProps {
   roles: Role[];
   connections: Connection[];
-  rolesByTrack: Record<Track, Role[]>;
-  trackConfig: Record<Track, { label: string; bg: string; color: string }>;
+  hoveredRoleId: string | null;
+  selectedRoleId: string | null;
 }
 
 interface Position {
@@ -16,225 +17,223 @@ interface Position {
   height: number;
 }
 
-export function PathConnectors({ roles, connections }: PathConnectorsProps) {
+interface Anchor {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+}
+
+const STROKE = 1.44;
+const CARD_PAD = 12;
+const ARROW_SIZE = 8.3;
+
+/** Màu xanh lá thống nhất cho đường + đầu mũi tên (theo theme sáng/tối) */
+const CONNECTOR_GREEN = 'var(--cp-primary)';
+const CONNECTOR_GREEN_ACTIVE = 'var(--cp-highlight)';
+
+const ROW_ALIGN_THRESHOLD = 6;
+
+function isDifferentRow(from: Position, to: Position): boolean {
+  return Math.abs(from.y - to.y) > ROW_ALIGN_THRESHOLD;
+}
+
+function getAnchors(
+  from: Position,
+  to: Position,
+  type: Connection['type'],
+  fromRole?: Role,
+  toRole?: Role
+): Anchor {
+  if (type === 'vertical') {
+    return {
+      x1: from.x,
+      y1: from.y + from.height / 2 + CARD_PAD,
+      x2: to.x,
+      y2: to.y - to.height / 2 - CARD_PAD,
+    };
+  }
+
+  const goingRight = to.x >= from.x;
+  const exitX = goingRight ? from.x + from.width / 2 + CARD_PAD : from.x - from.width / 2 - CARD_PAD;
+  const enterX = goingRight ? to.x - to.width / 2 - CARD_PAD : to.x + to.width / 2 + CARD_PAD;
+
+  // Khác hàng: ngang ra cạnh thẻ → xuống/ lên tại cột đích (giống mũi tên xanh mẫu)
+  if (isDifferentRow(from, to)) {
+    const isMgmtToProductHead =
+      fromRole?.track === 'management' &&
+      toRole?.track === 'leadership' &&
+      toRole.level === 4;
+
+    const cornerX = to.x;
+    const endY = isMgmtToProductHead ? to.y - to.height / 2 - CARD_PAD : to.y;
+
+    return { x1: exitX, y1: from.y, x2: cornerX, y2: endY };
+  }
+
+  const midY = (from.y + to.y) / 2;
+  return { x1: exitX, y1: midY, x2: enterX, y2: midY };
+}
+
+/** Cùng hàng: thẳng ngang. Khác hàng: chữ L (ngang rồi dọc tại cột đích) */
+function buildPath(anchor: Anchor, orthogonal: boolean): string {
+  const { x1, y1, x2, y2 } = anchor;
+
+  if (orthogonal) {
+    return `M ${x1} ${y1} L ${x2} ${y1} L ${x2} ${y2}`;
+  }
+
+  return `M ${x1} ${y1} L ${x2} ${y2}`;
+}
+
+export function PathConnectors({
+  roles,
+  connections,
+  hoveredRoleId,
+  selectedRoleId,
+}: PathConnectorsProps) {
   const [positions, setPositions] = useState<Record<string, Position>>({});
+  const uid = useId().replace(/:/g, '');
 
   useEffect(() => {
     const updatePositions = () => {
+      const canvas = document.querySelector(`[${DIAGRAM_CANVAS_ATTR}]`) as HTMLElement | null;
+      if (!canvas) return;
+
       const newPositions: Record<string, Position> = {};
 
       roles.forEach((role) => {
-        const element = document.querySelector(`[data-role-id="${role.id}"]`);
-        if (element) {
-          const rect = element.getBoundingClientRect();
-          const container = element.closest('.relative');
-          const containerRect = container?.getBoundingClientRect();
+        const element = canvas.querySelector(`[data-role-id="${role.id}"]`) as HTMLElement | null;
+        if (!element) return;
 
-          if (containerRect) {
-            newPositions[role.id] = {
-              x: rect.left - containerRect.left + rect.width / 2,
-              y: rect.top - containerRect.top + rect.height / 2,
-              width: rect.width,
-              height: rect.height,
-            };
-          }
-        }
+        newPositions[role.id] = getPositionInContainer(canvas, element);
       });
 
-      setPositions(newPositions);
+      if (Object.keys(newPositions).length > 0) {
+        setPositions(newPositions);
+      }
     };
 
-    // Initial update
     updatePositions();
+    const raf = requestAnimationFrame(updatePositions);
+    const timeout = window.setTimeout(updatePositions, 500);
 
-    // Update on resize with debounce
-    let timeout: NodeJS.Timeout;
-    const handleResize = () => {
-      clearTimeout(timeout);
-      timeout = setTimeout(updatePositions, 100);
-    };
+    const canvas = document.querySelector(`[${DIAGRAM_CANVAS_ATTR}]`);
+    const resizeObserver =
+      canvas && typeof ResizeObserver !== 'undefined'
+        ? new ResizeObserver(() => updatePositions())
+        : null;
+    resizeObserver?.observe(canvas as Element);
 
-    window.addEventListener('resize', handleResize);
+    window.addEventListener('resize', updatePositions);
+    window.addEventListener('beforeprint', updatePositions);
+    window.addEventListener('casso:recalc-connectors', updatePositions);
+
     return () => {
-      window.removeEventListener('resize', handleResize);
+      cancelAnimationFrame(raf);
       clearTimeout(timeout);
+      resizeObserver?.disconnect();
+      window.removeEventListener('resize', updatePositions);
+      window.removeEventListener('beforeprint', updatePositions);
+      window.removeEventListener('casso:recalc-connectors', updatePositions);
     };
-  }, [roles]);
+  }, [roles, connections]);
 
   if (Object.keys(positions).length === 0) {
     return null;
   }
 
+  const highlightFrom = hoveredRoleId ?? selectedRoleId;
+  const arrowEndId = `arrow-end-${uid}`;
+  const arrowStartId = `arrow-start-${uid}`;
+
+  const markerProps = {
+    viewBox: '0 0 10 10',
+    refX: 10,
+    refY: 5,
+    markerWidth: ARROW_SIZE,
+    markerHeight: ARROW_SIZE,
+    markerUnits: 'userSpaceOnUse' as const,
+    orient: 'auto' as const,
+  };
+
   return (
     <svg
-      className="absolute inset-0 pointer-events-none overflow-visible"
-      style={{ zIndex: 1 }}
+      className="absolute inset-0 w-full h-full pointer-events-none overflow-visible"
+      style={{ zIndex: 2 }}
+      aria-hidden
     >
       <defs>
-        {/* Gradient for arrows */}
-        <linearGradient id="gradient-green" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#40916C" />
-          <stop offset="100%" stopColor="#2D6A4F" />
-        </linearGradient>
-
-        {/* Glow filter */}
-        <filter id="glow">
-          <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
-          <feMerge>
-            <feMergeNode in="coloredBlur"/>
-            <feMergeNode in="SourceGraphic"/>
-          </feMerge>
-        </filter>
-
-        {/* Arrow markers */}
-        <marker
-          id="arrowhead"
-          markerWidth="12"
-          markerHeight="12"
-          refX="10"
-          refY="3.5"
-          orient="auto"
-          markerUnits="strokeWidth"
-        >
-          <path d="M0,0 L0,7 L10,3.5 z" fill="url(#gradient-green)" />
+        <marker id={arrowEndId} {...markerProps}>
+          <path d="M0,1.5 L10,5 L0,8.5 Z" fill={CONNECTOR_GREEN} />
         </marker>
-
         <marker
-          id="arrowhead-dark"
-          markerWidth="12"
-          markerHeight="12"
-          refX="10"
-          refY="3.5"
-          orient="auto"
-          markerUnits="strokeWidth"
+          id={arrowStartId}
+          {...markerProps}
+          refX={0}
+          orient="auto-start-reverse"
         >
-          <path d="M0,0 L0,7 L10,3.5 z" fill="#2D6A4F" />
+          <path d="M0,1.5 L10,5 L0,8.5 Z" fill={CONNECTOR_GREEN} />
+        </marker>
+        <marker id={`${arrowEndId}-hi`} {...markerProps}>
+          <path d="M0,1.5 L10,5 L0,8.5 Z" fill={CONNECTOR_GREEN_ACTIVE} />
+        </marker>
+        <marker
+          id={`${arrowStartId}-hi`}
+          {...markerProps}
+          refX={0}
+          orient="auto-start-reverse"
+        >
+          <path d="M0,1.5 L10,5 L0,8.5 Z" fill={CONNECTOR_GREEN_ACTIVE} />
         </marker>
       </defs>
 
       {connections.map((conn, index) => {
         const from = positions[conn.from];
         const to = positions[conn.to];
-
         if (!from || !to) return null;
 
-        const pathId = `path-${conn.from}-${conn.to}-${index}`;
+        const pathId = `${uid}-${conn.from}-${conn.to}-${index}`;
+        const fromRole = roles.find((r) => r.id === conn.from);
+        const toRole = roles.find((r) => r.id === conn.to);
+        const anchor = getAnchors(from, to, conn.type, fromRole, toRole);
+        const orthogonal =
+          conn.type !== 'vertical' && isDifferentRow(from, to);
+        const d = buildPath(anchor, orthogonal);
 
-        if (conn.type === 'vertical') {
-          // Straight vertical line within same track
-          const x = from.x;
-          const y1 = from.y + from.height / 2 + 5;
-          const y2 = to.y - to.height / 2 - 5;
+        const isHighlight =
+          highlightFrom !== null &&
+          (conn.from === highlightFrom || conn.to === highlightFrom);
 
-          return (
-            <g key={pathId}>
-              <motion.line
-                initial={{ pathLength: 0, opacity: 0 }}
-                animate={{ pathLength: 1, opacity: 1 }}
-                transition={{ duration: 0.6, delay: index * 0.05 }}
-                x1={x}
-                y1={y1}
-                x2={x}
-                y2={y2}
-                stroke="url(#gradient-green)"
-                strokeWidth="3"
-                markerEnd="url(#arrowhead)"
-                filter="url(#glow)"
-                strokeLinecap="round"
-              />
-            </g>
-          );
-        } else if (conn.type === 'horizontal') {
-          // Curved horizontal line between tracks
-          const x1 = from.x + from.width / 2 + 10;
-          const y1 = from.y;
-          const x2 = to.x - to.width / 2 - 10;
-          const y2 = to.y;
+        const isBidirectional = conn.type === 'bidirectional';
+        const baseDelay = 0.35 + index * 0.06;
 
-          const midX = (x1 + x2) / 2;
-          const path = `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`;
+        const strokeColor = isHighlight ? CONNECTOR_GREEN_ACTIVE : CONNECTOR_GREEN;
+        const endMarker = isHighlight ? `${arrowEndId}-hi` : arrowEndId;
+        const startMarker = isHighlight ? `${arrowStartId}-hi` : arrowStartId;
 
-          return (
-            <g key={pathId}>
-              <motion.path
-                initial={{ pathLength: 0, opacity: 0 }}
-                animate={{ pathLength: 1, opacity: 1 }}
-                transition={{ duration: 0.8, delay: 0.3 + index * 0.05 }}
-                d={path}
-                stroke="#2D6A4F"
-                strokeWidth="3"
-                fill="none"
-                markerEnd="url(#arrowhead-dark)"
-                filter="url(#glow)"
-                strokeLinecap="round"
-              />
-            </g>
-          );
-        } else if (conn.type === 'bidirectional') {
-          // Dashed bidirectional line
-          const x1 = from.x + from.width / 2 + 10;
-          const y1 = from.y;
-          const x2 = to.x - to.width / 2 - 10;
-          const y2 = to.y;
-
-          const midX = (x1 + x2) / 2;
-          const midY = (y1 + y2) / 2;
-          const path = `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`;
-
-          return (
-            <g key={pathId}>
-              <motion.path
-                initial={{ pathLength: 0, opacity: 0 }}
-                animate={{ pathLength: 1, opacity: 1 }}
-                transition={{ duration: 0.8, delay: 0.5 + index * 0.05 }}
-                d={path}
-                stroke="#40916C"
-                strokeWidth="3"
-                strokeDasharray="8 6"
-                fill="none"
-                filter="url(#glow)"
-                strokeLinecap="round"
-              />
-              {/* Bidirectional arrows */}
-              <motion.circle
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 1 + index * 0.05, type: "spring" }}
-                cx={x1}
-                cy={y1}
-                r="4"
-                fill="#40916C"
-              />
-              <motion.circle
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 1 + index * 0.05, type: "spring" }}
-                cx={x2}
-                cy={y2}
-                r="4"
-                fill="#2D6A4F"
-              />
-              {/* Label */}
-              <foreignObject
-                x={midX - 50}
-                y={midY - 14}
-                width="100"
-                height="28"
-              >
-                <motion.div
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 1.2 + index * 0.05, type: "spring" }}
-                  className="bg-gradient-to-r from-[#40916C] to-[#2D6A4F] text-white text-[10px] font-semibold px-3 py-1.5 rounded-full text-center shadow-lg"
-                >
-                  ↔ Transfer
-                </motion.div>
-              </foreignObject>
-            </g>
-          );
-        }
-
-        return null;
+        return (
+          <path
+            key={pathId}
+            d={d}
+            fill="none"
+            stroke={strokeColor}
+            strokeWidth={STROKE}
+            pathLength={isBidirectional ? undefined : 1}
+            strokeDasharray={isBidirectional ? '6 4' : undefined}
+            markerEnd={`url(#${endMarker})`}
+            markerStart={isBidirectional ? `url(#${startMarker})` : undefined}
+            className={[
+              isBidirectional ? 'connector-path-bidi' : 'connector-path',
+              isHighlight ? 'connector-path--highlight' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+            style={{
+              animationDelay: `${baseDelay}s`,
+            }}
+          />
+        );
       })}
     </svg>
   );

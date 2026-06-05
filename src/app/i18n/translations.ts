@@ -1,0 +1,91 @@
+export type Locale = 'vi' | 'en';
+export type Theme = 'light' | 'dark';
+
+export const translations = {
+  vi: {
+    careerPath: 'Career Path',
+    headerTagline: 'Lộ trình thăng tiến theo chuyên môn',
+    themeLight: 'Chế độ sáng',
+    themeDark: 'Chế độ tối',
+    language: 'Ngôn ngữ',
+    sidebarTitle: 'Chuyên môn',
+    sidebarCount: (active: number, total: number) => `${active} hoạt động / ${total}`,
+    searchPlaceholder: 'Tìm...',
+    searchAria: 'Tìm chuyên môn',
+    mobileMenuAria: 'Mở danh sách chuyên môn',
+    mobileCloseAria: 'Đóng danh sách chuyên môn',
+    noSearchResults: 'Không tìm thấy chuyên môn',
+    notEnabled: 'Chưa kích hoạt',
+    emptyHeadline: {
+      lead: 'Bạn đã sẵn sàng làm ',
+      ceo: 'CEO',
+      mid: ' của ',
+      casso: 'CASSO',
+      tail: ' chưa?',
+    },
+    emptySubtitle: (active: number, total: number) =>
+      `${active} / ${total} chuyên môn đang hoạt động`,
+    emptyReady: 'Sẵn sàng',
+    missingTitle: 'Chưa có lộ trình',
+    missingBody: (name: string) =>
+      `Chuyên môn ${name} chưa có dữ liệu. Vui lòng chọn chuyên môn khác.`,
+    exportPdf: 'Export PDF',
+    share: 'Chia sẻ',
+    shareCopied: 'Đã sao chép link chia sẻ',
+    shareError: 'Không thể sao chép link',
+    exportHint: 'Mở hộp thoại in — chọn "Lưu thành PDF"',
+    legendPromotion: 'Thăng tiến',
+    legendBidirectional: 'Chuyển đổi 2 chiều',
+    tracks: {
+      trainee: 'Trainee',
+      intern: 'Intern',
+      professional: 'Professional',
+      management: 'Management',
+      leadership: 'Leadership',
+    },
+  },
+  en: {
+    careerPath: 'Career Path',
+    headerTagline: 'Career progression by expertise',
+    themeLight: 'Light mode',
+    themeDark: 'Dark mode',
+    language: 'Language',
+    sidebarTitle: 'Expertise',
+    sidebarCount: (active: number, total: number) => `${active} active / ${total}`,
+    searchPlaceholder: 'Search...',
+    searchAria: 'Search expertise',
+    mobileMenuAria: 'Open expertise list',
+    mobileCloseAria: 'Close expertise list',
+    noSearchResults: 'No expertises found',
+    notEnabled: 'Not enabled',
+    emptyHeadline: {
+      lead: 'Are you ready to become ',
+      ceo: 'CEO',
+      mid: ' of ',
+      casso: 'CASSO',
+      tail: '?',
+    },
+    emptySubtitle: (active: number, total: number) =>
+      `${active} / ${total} expertises active`,
+    emptyReady: 'Ready',
+    missingTitle: 'No career path yet',
+    missingBody: (name: string) =>
+      `Expertise ${name} has no path data. Please choose another expertise.`,
+    exportPdf: 'Export PDF',
+    share: 'Share',
+    shareCopied: 'Link copied to clipboard',
+    shareError: 'Could not copy link',
+    exportHint: 'Open print dialog — choose "Save as PDF"',
+    legendPromotion: 'Promotion',
+    legendBidirectional: 'Two-way transition',
+    tracks: {
+      trainee: 'Trainee',
+      intern: 'Intern',
+      professional: 'Professional',
+      management: 'Management',
+      leadership: 'Leadership',
+    },
+  },
+} as const;
+
+export type Translation = (typeof translations)['vi'];

@@ -1,243 +1,292 @@
-import { motion } from 'motion/react';
-import { Share2, Download } from 'lucide-react';
-import type { CareerPath, Track } from '../data/careerPaths';
+import { Fragment, useEffect, useState } from 'react';
+import { Share2, Download, Check } from 'lucide-react';
+import { toast } from 'sonner';
+import type { CareerPath } from '../data/careerPaths';
 import { RoleCard } from './RoleCard';
 import { PathConnectors } from './PathConnectors';
 import { expertises } from '../data/expertises';
-import { segmentColors } from '../data/expertises';
+import { copyCurrentUrl, exportDiagramToPdf } from '../utils/careerPathUtils';
+import { useAppPreferences } from '../context/AppPreferences';
+import type { Track } from '../data/careerPaths';
+import { DIAGRAM_CANVAS_ATTR, getLevelRows, getMaxRow, getRoleRow } from '../utils/careerPathLayout';
+import { trackTheme } from '../utils/designTokens';
+import {
+  CAREER_TRACKS,
+  getDiagramGridColumns,
+  getDiagramGridRows,
+  LEVEL_ROW_HEIGHT_PX,
+} from '../utils/careerPathGrid';
 
 interface CareerPathDiagramProps {
   careerPath: CareerPath;
 }
 
-const trackConfig: Record<Track, { label: string; bg: string; color: string }> = {
-  trainee: {
-    label: 'Trainee',
-    bg: 'rgba(255, 255, 255, 0.4)',
-    color: '#A8D5B5',
-  },
-  intern: {
-    label: 'Intern',
-    bg: 'rgba(255, 255, 255, 0.5)',
-    color: '#74C69D',
-  },
-  professional: {
-    label: 'Professional',
-    bg: 'rgba(240, 255, 244, 0.6)',
-    color: '#40916C',
-  },
-  management: {
-    label: 'Management',
-    bg: 'rgba(245, 245, 240, 0.6)',
-    color: '#2D6A4F',
-  },
-  leadership: {
-    label: 'Leadership',
-    bg: 'rgba(232, 245, 233, 0.7)',
-    color: '#1B4332',
-  },
-};
+const gridGap = '0 0.875rem';
 
 export function CareerPathDiagram({ careerPath }: CareerPathDiagramProps) {
+  const { t } = useAppPreferences();
+  const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
+  const [hoveredRoleId, setHoveredRoleId] = useState<string | null>(null);
+  const [hoveredTrack, setHoveredTrack] = useState<Track | null>(null);
+  const [shareCopied, setShareCopied] = useState(false);
+
   const expertise = expertises.find((e) => e.id === careerPath.expertiseId);
 
-  // Group roles by track
-  const rolesByTrack = careerPath.roles.reduce((acc, role) => {
-    if (!acc[role.track]) {
-      acc[role.track] = [];
-    }
-    acc[role.track].push(role);
-    return acc;
-  }, {} as Record<Track, typeof careerPath.roles>);
+  useEffect(() => {
+    setSelectedRoleId(null);
+    setHoveredRoleId(null);
+  }, [careerPath.expertiseId]);
 
-  // Sort roles within each track by level
+  const rolesByTrack = careerPath.roles.reduce(
+    (acc, role) => {
+      if (!acc[role.track]) acc[role.track] = [];
+      acc[role.track].push(role);
+      return acc;
+    },
+    {} as Record<Track, typeof careerPath.roles>
+  );
+
   Object.values(rolesByTrack).forEach((roles) => {
     roles.sort((a, b) => a.level - b.level);
   });
 
-  const tracks: Track[] = ['trainee', 'intern', 'professional', 'management', 'leadership'];
+  const maxRow = getMaxRow(careerPath.roles);
+  const levelRows = getLevelRows(maxRow);
+  const gridColumns = getDiagramGridColumns();
+  const gridRows = getDiagramGridRows(maxRow);
+
+  const handleShare = async () => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('expertise', careerPath.expertiseId);
+    history.replaceState(null, '', url.toString());
+
+    const copied = await copyCurrentUrl();
+    if (copied) {
+      setShareCopied(true);
+      toast.success(t.shareCopied);
+      setTimeout(() => setShareCopied(false), 2000);
+    } else {
+      toast.error(t.shareError);
+    }
+  };
+
+  const handleExport = () => {
+    exportDiagramToPdf(expertise?.name ?? 'Career Path');
+    toast.info(t.exportHint);
+  };
+
+  const breadcrumbGroup = expertise?.group ?? 'Career Path';
 
   return (
-    <div className="h-full overflow-auto">
-      <div className="p-12 max-w-[1600px] mx-auto">
-        {/* Header Section */}
-        <motion.div
-          initial={{ y: -20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          className="mb-10"
-        >
-          <div className="flex items-start justify-between">
-            <div>
-              <motion.div
-                initial={{ x: -20, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                transition={{ delay: 0.1 }}
-                className="flex items-center gap-3 mb-4"
-              >
-                <h1 className="text-4xl font-bold text-[#0D0D0D]">
-                  {expertise?.name}
-                </h1>
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.3, type: "spring" }}
-                  className="px-4 py-1.5 rounded-full text-white text-sm font-semibold"
-                  style={{ backgroundColor: segmentColors[expertise?.segment || 'BUILD'] }}
-                >
-                  {expertise?.segment}
-                </motion.div>
-              </motion.div>
+    <div className="h-full overflow-auto career-diagram-area">
+      <div className="career-diagram-print-sheet p-8 lg:p-10 max-w-[1680px] mx-auto print:p-6">
+        <header className="mb-8 animate-[card-enter_0.4s_ease-out_both]">
+          <p className="text-[13px] text-cp-muted mb-2 font-medium tracking-wide">
+            {breadcrumbGroup}
+            <span className="mx-2 opacity-40">›</span>
+            <span className="text-cp-primary">{expertise?.name}</span>
+          </p>
 
-              <motion.div
-                initial={{ x: -20, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                transition={{ delay: 0.2 }}
-                className="flex items-center gap-3"
-              >
-                <span className="px-4 py-1.5 rounded-full bg-white/60 backdrop-blur-sm text-[#0D0D0D] text-sm font-medium border border-[#40916C]/20">
-                  {expertise?.group}
-                </span>
+          <div className="flex items-start justify-between gap-6 flex-wrap">
+            <div>
+              <h1 className="font-display text-[2rem] lg:text-[2.25rem] text-cp leading-tight mb-4">
+                {expertise?.name}
+              </h1>
+              <div className="flex items-center gap-2 flex-wrap">
+                {expertise?.segment && (
+                  <span className="px-3 py-1 rounded-full text-[12px] font-semibold border border-cp text-cp-primary bg-cp-surface/80">
+                    {expertise.segment}
+                  </span>
+                )}
                 {expertise?.flag && (
-                  <span className="px-4 py-1.5 rounded-full bg-[#0D0D0D] text-white text-sm font-medium">
+                  <span className="px-3 py-1 rounded-full text-[12px] font-medium border border-cp text-cp-muted bg-cp-surface/60">
                     {expertise.flag}
                   </span>
                 )}
-              </motion.div>
+                <span className="px-3 py-1 rounded-full text-[12px] font-medium text-cp-muted border border-cp">
+                  {expertise?.group}
+                </span>
+                {expertise && !expertise.enabled && (
+                  <span className="px-3 py-1 rounded-full text-[12px] text-cp-muted border border-dashed border-cp">
+                    {t.notEnabled}
+                  </span>
+                )}
+              </div>
             </div>
 
-            <motion.div
-              initial={{ x: 20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className="flex items-center gap-3"
-            >
-              <motion.button
-                whileHover={{ scale: 1.05, y: -2 }}
-                whileTap={{ scale: 0.95 }}
-                className="px-5 py-2.5 rounded-xl bg-white/60 backdrop-blur-sm text-[#0D0D0D] hover:bg-white/80 transition-all flex items-center gap-2 border border-[#40916C]/20 shadow-lg"
+            <div className="flex items-center gap-2 print:hidden">
+              <button
+                type="button"
+                onClick={handleExport}
+                className="px-4 py-2 rounded-full bg-transparent border border-[var(--cp-primary)] text-cp-primary text-[13px] font-semibold hover:bg-[var(--cp-primary)]/10 transition-colors duration-200 flex items-center gap-2"
               >
                 <Download className="w-4 h-4" />
-                <span className="text-sm font-medium">Export</span>
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.05, y: -2 }}
-                whileTap={{ scale: 0.95 }}
-                className="p-2.5 rounded-xl bg-white/60 backdrop-blur-sm text-[#0D0D0D] hover:bg-white/80 transition-all border border-[#40916C]/20 shadow-lg"
+                {t.exportPdf}
+              </button>
+              <button
+                type="button"
+                onClick={handleShare}
+                className="w-10 h-10 rounded-full border border-cp bg-cp-surface/80 flex items-center justify-center text-cp-primary hover:border-[var(--cp-primary)]/50 transition-colors duration-200"
+                title={t.share}
               >
-                <Share2 className="w-4 h-4" />
-              </motion.button>
-            </motion.div>
+                {shareCopied ? (
+                  <Check className="w-4 h-4 text-[var(--cp-highlight)]" />
+                ) : (
+                  <Share2 className="w-4 h-4" />
+                )}
+              </button>
+            </div>
           </div>
-        </motion.div>
 
-        {/* Career Path Diagram */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-          className="relative"
-        >
-          {/* Column Headers */}
-          <div className="flex gap-6 mb-8">
-            {tracks.map((track, index) => {
-              const count = rolesByTrack[track]?.length || 0;
-              const config = trackConfig[track];
-              return (
-                <motion.div
-                  key={track}
-                  initial={{ y: -20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.4 + index * 0.1 }}
-                  className="flex-1"
-                  style={{ minWidth: track === 'trainee' || track === 'intern' ? '180px' : '240px' }}
+          <div className="mt-6 h-px bg-[var(--cp-border)]" />
+        </header>
+
+        <div className="career-canvas-scroll-wrap">
+          <div className="career-canvas-scroll min-w-0">
+            <div className="min-w-[960px] relative">
+              <div
+                className="grid mb-4"
+                style={{ gridTemplateColumns: gridColumns, gap: gridGap }}
+              >
+                {CAREER_TRACKS.map((track, trackIndex) => {
+                  const theme = trackTheme[track];
+                  const label = t.tracks[track as Track];
+                  return (
+                    <div
+                      key={track}
+                      className="px-2 pb-3 border-b border-cp role-card-enter"
+                      style={{
+                        animationDelay: `${trackIndex * 80}ms`,
+                        backgroundColor: theme.tint,
+                      }}
+                    >
+                      <span className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-cp-muted text-center">
+                        {label}
+                      </span>
+                      <span
+                        className="block w-2 h-2 rounded-full mx-auto mt-2"
+                        style={{ backgroundColor: theme.dot }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="relative" {...{ [DIAGRAM_CANVAS_ATTR]: '' }}>
+                <div
+                  className="absolute inset-0 grid pointer-events-none transition-[background] duration-300"
+                  style={{
+                    gridTemplateColumns: gridColumns,
+                    gridTemplateRows: gridRows,
+                    gap: gridGap,
+                  }}
                 >
-                  <div
-                    className="px-6 py-3 rounded-2xl text-center backdrop-blur-sm border-2"
-                    style={{
-                      backgroundColor: config.bg,
-                      borderColor: `${config.color}40`,
-                    }}
-                  >
-                    <div className="text-[#0D0D0D] text-sm font-bold mb-1">
-                      {config.label}
-                    </div>
-                    <div className="text-xs font-medium" style={{ color: config.color }}>
-                      {count} {count === 1 ? 'level' : 'levels'}
-                    </div>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
-
-          {/* Main Diagram Area with SVG Overlay */}
-          <div className="relative">
-            {/* Track Columns */}
-            <div className="flex gap-6">
-              {tracks.map((track) => {
-                const roles = rolesByTrack[track] || [];
-                const config = trackConfig[track];
-
-                return (
-                  <div
-                    key={track}
-                    className="flex-1 min-h-[600px] rounded-3xl p-6 backdrop-blur-sm border-2"
-                    style={{
-                      backgroundColor: config.bg,
-                      borderColor: `${config.color}30`,
-                      minWidth: track === 'trainee' || track === 'intern' ? '180px' : '240px',
-                    }}
-                  >
-                    <div className="space-y-8">
-                      {roles.map((role, index) => (
-                        <RoleCard
-                          key={role.id}
-                          role={role}
-                          trackColor={config.color}
-                          index={index}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* SVG Connectors Layer */}
-            <PathConnectors
-              roles={careerPath.roles}
-              connections={careerPath.connections}
-              rolesByTrack={rolesByTrack}
-              trackConfig={trackConfig}
-            />
-          </div>
-
-          {/* Legend */}
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.8 }}
-            className="mt-10 bg-white/80 backdrop-blur-xl border-2 border-[#40916C]/20 rounded-2xl p-6 shadow-xl"
-          >
-            <div className="flex items-center gap-10 text-sm flex-wrap">
-              <div className="flex items-center gap-3">
-                <div className="w-6 h-1 bg-[#40916C] rounded-full" />
-                <span className="text-[#0D0D0D] font-medium">Promotion</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-6 h-1 bg-[#2D6A4F] rounded-full opacity-50" style={{ borderTop: '2px dashed #40916C' }} />
-                <span className="text-[#0D0D0D] font-medium">Transferable</span>
-              </div>
-              <div className="h-6 w-px bg-[#D8F3DC]" />
-              {Object.entries(trackConfig).map(([track, config]) => (
-                <div key={track} className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded-full" style={{ backgroundColor: config.color }} />
-                  <span className="text-[#0D0D0D] text-sm font-medium">{config.label}</span>
+                  {CAREER_TRACKS.map((track, trackIndex) => {
+                    const theme = trackTheme[track];
+                    const bright = hoveredTrack === track;
+                    return (
+                      <div
+                        key={`bg-${track}`}
+                        className="rounded-sm border border-cp transition-colors duration-300"
+                        style={{
+                          gridColumn: trackIndex + 1,
+                          gridRow: `1 / ${maxRow + 1}`,
+                          backgroundColor: bright
+                            ? 'rgba(76, 195, 138, 0.06)'
+                            : theme.tint,
+                        }}
+                      />
+                    );
+                  })}
                 </div>
-              ))}
+
+                <div
+                  className="relative z-10 grid"
+                  style={{
+                    gridTemplateColumns: gridColumns,
+                    gridTemplateRows: gridRows,
+                    gap: gridGap,
+                  }}
+                >
+                  {levelRows.map((level) => (
+                    <Fragment key={level}>
+                      {CAREER_TRACKS.map((track, trackIndex) => {
+                        const roles = rolesByTrack[track] ?? [];
+                        const theme = trackTheme[track];
+                        const role = roles.find((r) => getRoleRow(r) === level);
+
+                        if (!role) return null;
+
+                        return (
+                          <div
+                            key={`${track}-${level}`}
+                            className="relative z-10 flex items-center justify-center px-2"
+                            style={{
+                              gridRow: level,
+                              gridColumn: trackIndex + 1,
+                              height: LEVEL_ROW_HEIGHT_PX,
+                              maxHeight: LEVEL_ROW_HEIGHT_PX,
+                            }}
+                            onMouseEnter={() => setHoveredTrack(track)}
+                            onMouseLeave={() => setHoveredTrack(null)}
+                          >
+                            <RoleCard
+                              role={role}
+                              trackColor={theme.dot}
+                              trackIndex={trackIndex}
+                              rowIndex={level}
+                              isSelected={selectedRoleId === role.id}
+                              isHovered={hoveredRoleId === role.id}
+                              onSelect={setSelectedRoleId}
+                              onHover={setHoveredRoleId}
+                            />
+                          </div>
+                        );
+                      })}
+                    </Fragment>
+                  ))}
+                </div>
+
+                <PathConnectors
+                  roles={careerPath.roles}
+                  connections={careerPath.connections}
+                  hoveredRoleId={hoveredRoleId}
+                  selectedRoleId={selectedRoleId}
+                />
+              </div>
             </div>
-          </motion.div>
-        </motion.div>
+          </div>
+        </div>
+
+        <div className="mt-8 glass-panel rounded-2xl px-6 py-4 print:hidden">
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-cp-surface/90 border border-cp text-[13px] text-cp">
+              <span className="inline-block w-8 h-0 border-t-[1.5px] border-[var(--cp-secondary)]" aria-hidden />
+              {t.legendPromotion}
+            </span>
+            <span className="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-cp-surface/90 border border-cp text-[13px] text-cp">
+              <span
+                className="inline-block w-8 h-0 border-t-[1.5px] border-dashed border-[var(--cp-highlight)]"
+                aria-hidden
+              />
+              {t.legendBidirectional}
+            </span>
+            <span className="hidden sm:block w-px h-5 bg-[var(--cp-border)]" />
+            {CAREER_TRACKS.map((track) => (
+              <span
+                key={track}
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-cp-surface/70 text-[13px] text-cp"
+              >
+                <span
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ backgroundColor: trackTheme[track].dot }}
+                  aria-hidden
+                />
+                {t.tracks[track as Track]}
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

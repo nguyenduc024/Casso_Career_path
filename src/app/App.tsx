@@ -1,78 +1,94 @@
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { useEffect, useState } from 'react';
+import { Toaster } from 'sonner';
 import { Sidebar } from './components/Sidebar';
 import { CareerPathDiagram } from './components/CareerPathDiagram';
 import { EmptyState } from './components/EmptyState';
+import { MissingPathState } from './components/MissingPathState';
+import { HeaderToolbar } from './components/HeaderToolbar';
+import { useAppPreferences } from './context/AppPreferences';
 import { expertises } from './data/expertises';
 import { careerPaths } from './data/careerPaths';
+import { cassoLogoUrl } from './cassoLogo';
+
+function getInitialExpertiseId(): string | null {
+  const params = new URLSearchParams(window.location.search);
+  const fromUrl = params.get('expertise');
+  if (fromUrl && expertises.some((e) => e.id === fromUrl)) {
+    return fromUrl;
+  }
+  return null;
+}
 
 export default function App() {
-  const [selectedExpertise, setSelectedExpertise] = useState<string | null>(null);
+  const { t } = useAppPreferences();
+  const [selectedExpertise, setSelectedExpertise] = useState<string | null>(getInitialExpertiseId);
+
+  const selectedExpertiseData = selectedExpertise
+    ? expertises.find((e) => e.id === selectedExpertise)
+    : null;
 
   const selectedPath = selectedExpertise
     ? careerPaths.find((path) => path.expertiseId === selectedExpertise)
     : null;
 
+  const enabledCount = expertises.filter((e) => e.enabled).length;
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (selectedExpertise) {
+      url.searchParams.set('expertise', selectedExpertise);
+    } else {
+      url.searchParams.delete('expertise');
+    }
+    history.replaceState(null, '', url.toString());
+  }, [selectedExpertise]);
+
   return (
-    <div className="size-full flex flex-col bg-gradient-to-br from-[#F5F5F0] via-[#FAFAF8] to-[#F0FFF4]">
-      {/* Header */}
-      <motion.header
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        className="h-20 backdrop-blur-xl bg-[#0D0D0D]/95 border-b border-[#40916C]/20 flex items-center justify-between px-10 shadow-lg"
-      >
-        <div className="flex items-center gap-4">
-          <motion.div
-            whileHover={{ scale: 1.05 }}
-            className="text-white font-bold text-2xl tracking-tight"
-          >
-            CASSO
-          </motion.div>
-          <div className="h-6 w-px bg-[#40916C]/30" />
-          <div className="text-white/70 text-sm">Career Explorer</div>
+    <div className="size-full flex flex-col bg-cp-bg">
+      <Toaster position="top-right" />
+
+      <header className="h-14 shrink-0 border-b border-cp bg-[var(--cp-header)] backdrop-blur-md flex items-center justify-between gap-4 px-6 lg:px-8 print:hidden">
+        <div className="flex items-center gap-3 min-w-0">
+          <img
+            src={cassoLogoUrl}
+            alt="Casso"
+            className="h-8 w-auto max-w-[120px] object-contain shrink-0"
+          />
+          <span className="font-brand text-[1.35rem] text-cp-primary shrink-0">Casso</span>
+          <span className="hidden sm:inline text-cp-muted text-sm font-medium truncate">
+            {t.careerPath}
+          </span>
         </div>
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-          className="text-[#52B788] text-sm font-medium"
-        >
-          ✨ Explore your path
-        </motion.div>
-      </motion.header>
 
-      {/* Main Layout */}
-      <div className="flex-1 flex overflow-hidden">
-        <Sidebar
-          expertises={expertises}
-          selectedExpertise={selectedExpertise}
-          onSelectExpertise={setSelectedExpertise}
-        />
+        <div className="flex items-center gap-3 shrink-0">
+          <span className="text-[12px] text-cp-muted hidden lg:block tracking-wide max-w-[220px] truncate">
+            {t.headerTagline}
+          </span>
+          <HeaderToolbar />
+        </div>
+      </header>
 
-        <main className="flex-1 overflow-auto">
-          <AnimatePresence mode="wait">
-            {selectedPath ? (
-              <motion.div
-                key="diagram"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.4 }}
-              >
-                <CareerPathDiagram careerPath={selectedPath} />
-              </motion.div>
-            ) : (
-              <motion.div
-                key="empty"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.4 }}
-              >
-                <EmptyState onExplore={() => setSelectedExpertise(expertises[0].id)} />
-              </motion.div>
-            )}
-          </AnimatePresence>
+      <div className="flex-1 flex min-h-0 overflow-hidden">
+        <div className="print:hidden h-full min-h-0 shrink-0 flex">
+          <Sidebar
+            expertises={expertises}
+            selectedExpertise={selectedExpertise}
+            onSelectExpertise={setSelectedExpertise}
+          />
+        </div>
+
+        <main className="flex-1 overflow-auto min-w-0">
+          {!selectedExpertise ? (
+            <EmptyState
+              enabledCount={enabledCount}
+              totalCount={expertises.length}
+              onExplore={(id) => setSelectedExpertise(id)}
+            />
+          ) : selectedPath ? (
+            <CareerPathDiagram careerPath={selectedPath} />
+          ) : (
+            <MissingPathState expertiseName={selectedExpertiseData?.name ?? ''} />
+          )}
         </main>
       </div>
     </div>
